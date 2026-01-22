@@ -1,0 +1,47 @@
+<template>
+    <lightning-card title="Account Contact Manager" icon-name="standard:account">
+        <div class="slds-p-around_medium">
+
+            <!-- Account Dropdown -->
+            <lightning-combobox
+                label="Select Account"
+                value={selectedAccountId}
+                options={accountOptions}
+                onchange={handleAccountChange}>
+            </lightning-combobox>
+
+            <template if:true={contacts}>
+                <div class="slds-m-top_medium">
+
+                    <!-- Action Buttons -->
+                    <div class="slds-m-bottom_small">
+                        <lightning-button
+                            variant="brand"
+                            label="Save Changes"
+                            onclick={handleSave}>
+                        </lightning-button>
+
+                        <lightning-button
+                            variant="destructive"
+                            label="Delete Selected"
+                            onclick={handleDelete}
+                            class="slds-m-left_small">
+                        </lightning-button>
+                    </div>
+
+                    <!-- Contacts Table -->
+                    <lightning-datatable
+                        key-field="Id"
+                        data={contacts}
+                        columns={columns}
+                        draft-values={draftValues}
+                        onsave={handleSave}
+                        onrowselection={handleRowSelection}>
+                    </lightning-datatable>
+
+                </div>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>
