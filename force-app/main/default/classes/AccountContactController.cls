@@ -1,46 +1,40 @@
 public with sharing class AccountContactController {
 
-    // Get all Accounts
+    // Get all Accounts for dropdown
     @AuraEnabled(cacheable=true)
     public static List<Account> getAccounts() {
-        return [
-            SELECT Id, Name
-            FROM Account
-            ORDER BY Name
-        ];
+        return [SELECT Id, Name FROM Account ORDER BY Name];
     }
 
     // Get Contacts by Account Id
     @AuraEnabled(cacheable=true)
     public static List<Contact> getContactsByAccount(Id accountId) {
-        if (accountId == null) {
-            return new List<Contact>();
-        }
-
         return [
-            SELECT Id, Name, Email, Phone, Title
+            SELECT Id, FirstName, LastName, Email, Phone, Title
             FROM Contact
             WHERE AccountId = :accountId
-            ORDER BY Name
+            ORDER BY LastName, FirstName
         ];
     }
 
-    // Update Contacts (Inline Edit)
+    // Update Contacts
     @AuraEnabled
     public static void updateContacts(List<Contact> contacts) {
-        if (contacts == null || contacts.isEmpty()) return;
-
-        update contacts;
+        try {
+            update contacts;
+        } catch(Exception e) {
+            throw new AuraHandledException('Error updating contacts: ' + e.getMessage());
+        }
     }
 
-    // Delete Selected Contacts
+    // Delete Contacts
     @AuraEnabled
     public static void deleteContacts(List<Id> contactIds) {
-        if (contactIds == null || contactIds.isEmpty()) return;
-
-        List<Contact> contactsToDelete =
-            [SELECT Id FROM Contact WHERE Id IN :contactIds];
-
-        delete contactsToDelete;
+        try {
+            List<Contact> contactsToDelete = [SELECT Id FROM Contact WHERE Id IN :contactIds];
+            delete contactsToDelete;
+        } catch(Exception e) {
+            throw new AuraHandledException('Error deleting contacts: ' + e.getMessage());
+        }
     }
 }

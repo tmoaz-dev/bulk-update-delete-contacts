@@ -6,7 +6,8 @@ import deleteContacts from '@salesforce/apex/AccountContactController.deleteCont
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 const COLUMNS = [
-    { label: 'Name', fieldName: 'Name', editable: true },
+    { label: 'First Name', fieldName: 'FirstName', editable: true },
+    { label: 'Last Name', fieldName: 'LastName', editable: true },
     { label: 'Email', fieldName: 'Email', type: 'email', editable: true },
     { label: 'Phone', fieldName: 'Phone', type: 'phone', editable: true },
     { label: 'Title', fieldName: 'Title', editable: true }
@@ -15,14 +16,13 @@ const COLUMNS = [
 export default class AccountContactManager extends LightningElement {
 
     @track accountOptions = [];
-    @track contacts;
+    @track contacts = [];
     @track selectedAccountId;
     @track selectedRows = [];
     @track draftValues = [];
 
     columns = COLUMNS;
 
-    // Load Accounts
     @wire(getAccounts)
     wiredAccounts({ data, error }) {
         if (data) {
@@ -33,46 +33,61 @@ export default class AccountContactManager extends LightningElement {
         }
     }
 
-    // Account Change
     handleAccountChange(event) {
         this.selectedAccountId = event.detail.value;
         this.loadContacts();
     }
 
-    // Load Contacts
     loadContacts() {
+        if(!this.selectedAccountId) return;
+
         getContactsByAccount({ accountId: this.selectedAccountId })
             .then(result => {
                 this.contacts = result;
             })
             .catch(error => {
-                this.showToast('Error', error.body.message, 'error');
+                this.showToast('Error', error?.body?.message ?? 'Unknown error', 'error');
             });
     }
 
-    // Row Selection
     handleRowSelection(event) {
         this.selectedRows = event.detail.selectedRows;
     }
 
-    // Save Inline Edits
+    // Called when inline edit is saved
     handleSave(event) {
-        const updatedFields = event.detail.draftValues;
+        this.draftValues = event.detail.draftValues;
+        this.updateContacts(this.draftValues);
+    }
 
+    // Called when Save button is clicked
+    handleSaveButton() {
+        if (this.draftValues.length === 0) {
+            this.showToast('Info', 'No changes to save', 'info');
+            return;
+        }
+        this.updateContacts(this.draftValues);
+    }
+
+    updateContacts(updatedFields) {
         updateContacts({ contacts: updatedFields })
             .then(() => {
-                this.showToast('Success', 'Contacts updated successfully', 'success');
+                updatedFields.forEach(updated => {
+                    let index = this.contacts.findIndex(c => c.Id === updated.Id);
+                    if(index !== -1){
+                        this.contacts[index] = { ...this.contacts[index], ...updated };
+                    }
+                });
                 this.draftValues = [];
-                this.loadContacts();
+                this.showToast('Success', 'Contacts updated successfully', 'success');
             })
             .catch(error => {
-                this.showToast('Error', error.body.message, 'error');
+                this.showToast('Error', error?.body?.message ?? 'Unknown error', 'error');
             });
     }
 
-    // Delete Selected Contacts
     handleDelete() {
-        if (this.selectedRows.length === 0) {
+        if(this.selectedRows.length === 0){
             this.showToast('Warning', 'Please select at least one contact', 'warning');
             return;
         }
@@ -81,16 +96,16 @@ export default class AccountContactManager extends LightningElement {
 
         deleteContacts({ contactIds })
             .then(() => {
-                this.showToast('Success', 'Contacts deleted successfully', 'success');
+                this.contacts = this.contacts.filter(c => !contactIds.includes(c.Id));
                 this.selectedRows = [];
-                this.loadContacts();
+                this.showToast('Success', 'Contacts deleted successfully', 'success');
             })
             .catch(error => {
-                this.showToast('Error', error.body.message, 'error');
+                this.showToast('Error', error?.body?.message ?? 'Unknown error', 'error');
             });
     }
 
-    showToast(title, message, variant) {
+    showToast(title, message, variant){
         this.dispatchEvent(
             new ShowToastEvent({ title, message, variant })
         );
